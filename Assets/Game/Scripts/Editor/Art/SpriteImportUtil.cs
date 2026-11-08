@@ -29,7 +29,22 @@ namespace ClearToLand.EditorTools
             imp.filterMode = filter;
             imp.wrapMode = TextureWrapMode.Clamp;
             imp.npotScale = TextureImporterNPOTScale.None;
-            imp.textureCompression = compressed ? TextureImporterCompression.CompressedHQ : TextureImporterCompression.Uncompressed;
+            if (compressed)
+            {
+                // Large opaque art (map backgrounds): no alpha channel (DXT1/ETC2 RGB) + Crunch, which shrinks the WebGL
+                // download several-fold. Crunch is ignored where the platform format does not support it (e.g. ASTC).
+                bool opaque = IsOpaque(canvas);
+                imp.textureCompression = TextureImporterCompression.Compressed;
+                imp.crunchedCompression = true;
+                imp.compressionQuality = CrunchQuality;
+                imp.alphaSource = opaque ? TextureImporterAlphaSource.None : TextureImporterAlphaSource.FromInput;
+                imp.alphaIsTransparency = !opaque;
+            }
+            else
+            {
+                imp.textureCompression = TextureImporterCompression.Uncompressed;
+                imp.crunchedCompression = false;
+            }
             imp.maxTextureSize = Mathf.Clamp(Mathf.NextPowerOfTwo(Mathf.Max(canvas.Width, canvas.Height)), 32, 4096);
 
             TextureImporterSettings settings = new TextureImporterSettings();
@@ -44,6 +59,18 @@ namespace ClearToLand.EditorTools
             Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
             if (sprite == null) Debug.LogError($"[ClearToLand] Failed to import sprite at {assetPath}");
             return sprite;
+        }
+
+        /// <summary>Crunch quality (0-100) for compressed sprites; 75 keeps map art clean while cutting size a lot.</summary>
+        public const int CrunchQuality = 75;
+
+        /// <summary>True when every pixel is fully opaque (the texture can drop its alpha channel).</summary>
+        public static bool IsOpaque(PixelCanvas canvas)
+        {
+            for (int y = 0; y < canvas.Height; y++)
+                for (int x = 0; x < canvas.Width; x++)
+                    if (canvas[x, y].a < 0.999f) return false;
+            return true;
         }
 
         /// <summary>Creates an Assets/... folder (and parents) if missing.</summary>

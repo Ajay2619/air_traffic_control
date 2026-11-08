@@ -1,0 +1,7 @@
+<!--
+  Managed code stripping is set to High for WebGL (smaller itch.io download).
+  Keep the game's own runtime assembly intact so nothing it needs is stripped.
+-->
+<linker>
+  <assembly fullname="ClearToLand.Runtime" preserve="all" />
+</linker>

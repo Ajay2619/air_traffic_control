@@ -645,6 +645,12 @@ namespace ClearToLand.EditorTools
                 PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
                 PlayerSettings.WebGL.decompressionFallback = true;
                 PlayerSettings.WebGL.dataCaching = true;
+
+                // Download size: smaller IL2CPP output, aggressive managed stripping (the game uses no reflection;
+                // Assets/Game/link.xml preserves ClearToLand.Runtime anyway) and engine-module stripping.
+                PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.WebGL, Il2CppCodeGeneration.OptimizeSize);
+                PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.High);
+                PlayerSettings.stripEngineCode = true;
             });
 
             ApplySettingsGroup("Android", () =>
