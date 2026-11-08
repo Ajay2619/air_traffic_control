@@ -3,7 +3,10 @@ using UnityEngine;
 
 namespace ClearToLand
 {
-    /// <summary>Player preferences persisted in PlayerPrefs.</summary>
+    /// <summary>
+    /// Player preferences persisted through <see cref="PrefsStore"/> (PlayerPrefs, plus browser localStorage on
+    /// WebGL so settings survive new itch.io uploads).
+    /// </summary>
     public static class GameSettings
     {
         public const string SoundKey = "ctl.sound";
@@ -14,12 +17,12 @@ namespace ClearToLand
 
         public static bool SoundEnabled
         {
-            get => PlayerPrefs.GetInt(SoundKey, 1) == 1;
+            get => PrefsStore.GetInt(SoundKey, 1) == 1;
             set
             {
                 if (value == SoundEnabled) return;
-                PlayerPrefs.SetInt(SoundKey, value ? 1 : 0);
-                PlayerPrefs.Save();
+                PrefsStore.SetInt(SoundKey, value ? 1 : 0);
+                PrefsStore.Save();
                 Changed?.Invoke();
             }
         }
@@ -27,11 +30,11 @@ namespace ClearToLand
         /// <summary>True once the first-play drag hint has been shown.</summary>
         public static bool TutorialSeen
         {
-            get => PlayerPrefs.GetInt(TutorialSeenKey, 0) == 1;
+            get => PrefsStore.GetInt(TutorialSeenKey, 0) == 1;
             set
             {
-                PlayerPrefs.SetInt(TutorialSeenKey, value ? 1 : 0);
-                PlayerPrefs.Save();
+                PrefsStore.SetInt(TutorialSeenKey, value ? 1 : 0);
+                PrefsStore.Save();
                 Changed?.Invoke();
             }
         }

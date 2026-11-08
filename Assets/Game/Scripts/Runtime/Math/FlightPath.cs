@@ -12,6 +12,9 @@ namespace ClearToLand
         /// <summary>Hard cap so a player drawing in circles forever cannot grow the list unbounded.</summary>
         public const int MaxPoints = 1500;
 
+        /// <summary>When locking onto a runway, trailing points closer than this to the threshold line (or past it) are trimmed.</summary>
+        private const float ThresholdTrimBand = 0.05f;
+
         private readonly List<Vector2> _points = new List<Vector2>(256);
 
         /// <summary>Remaining waypoints, front = next target.</summary>
@@ -132,11 +135,10 @@ namespace ClearToLand
         /// </summary>
         public void LockForLanding(int spotIndex, Vector2 touchdownPoint, Vector2 runwayDirection, float spacing)
         {
-            if (runwayDirection.sqrMagnitude > 1e-6f)
+            if (runwayDirection.sqrMagnitude > 1e-6f && _points.Count > 1)
             {
-                Vector2 dir = runwayDirection.normalized;
-                while (_points.Count > 1 && Vector2.Dot(_points[_points.Count - 1] - touchdownPoint, dir) > -0.05f)
-                    _points.RemoveAt(_points.Count - 1);
+                int keep = LastKeptBeforeThreshold(touchdownPoint, runwayDirection.normalized);
+                _points.RemoveRange(keep + 1, _points.Count - keep - 1);
             }
 
             IsLocked = false; // allow AddPoint for the final approach
@@ -153,6 +155,56 @@ namespace ClearToLand
             IsLocked = true;
             IsLanding = true;
             LandingSpotIndex = spotIndex;
+        }
+
+        /// <summary>
+        /// True when the straight final leg that <see cref="LockForLanding"/> would build for a directional spot (from
+        /// the last point its trim keeps to <paramref name="touchdownPoint"/>) is within <paramref name="maxAngleDeg"/>
+        /// of <paramref name="runwayDirection"/>, i.e. the aircraft would still come in from the approach end. A path
+        /// that cuts onto the runway from the side, or whose kept points all lie past the threshold, yields a leg
+        /// that is near perpendicular or points backwards. Also true for an empty path, a zero direction (helipad)
+        /// or a zero-length leg.
+        /// </summary>
+        public bool FinalLegWithin(Vector2 touchdownPoint, Vector2 runwayDirection, float maxAngleDeg)
+        {
+            if (_points.Count == 0 || runwayDirection.sqrMagnitude <= 1e-6f) return true;
+            Vector2 dir = runwayDirection.normalized;
+            Vector2 leg = touchdownPoint - _points[LastKeptBeforeThreshold(touchdownPoint, dir)];
+            return leg.sqrMagnitude < 1e-6f || Vector2.Angle(leg, dir) <= maxAngleDeg;
+        }
+
+        /// <summary>
+        /// True when the route can still come straight in from <paramref name="origin"/> (the aircraft, which flies to
+        /// the first point) although no drawn point is left before the threshold: every point is at or past the
+        /// threshold band (so <see cref="FinalLegWithin"/> sees a backwards leg from the first one), while
+        /// <paramref name="origin"/> is still short of the threshold line and the leg from it to
+        /// <paramref name="touchdownPoint"/> is within <paramref name="maxAngleDeg"/> of
+        /// <paramref name="runwayDirection"/>. This is a quick drag onto the runway from an aircraft lined up just
+        /// short of it; the caller then clears the path before <see cref="LockForLanding"/> so the aircraft flies
+        /// straight to the touchdown point. False for an empty path or a zero direction (helipad).
+        /// </summary>
+        public bool CanFlyStraightIn(Vector2 origin, Vector2 touchdownPoint, Vector2 runwayDirection, float maxAngleDeg)
+        {
+            if (_points.Count == 0 || runwayDirection.sqrMagnitude <= 1e-6f) return false;
+            Vector2 dir = runwayDirection.normalized;
+            if (Vector2.Dot(origin - touchdownPoint, dir) > -ThresholdTrimBand) return false;
+            for (int i = 0; i < _points.Count; i++)
+            {
+                if (Vector2.Dot(_points[i] - touchdownPoint, dir) <= -ThresholdTrimBand) return false;
+            }
+            return Vector2.Angle(touchdownPoint - origin, dir) <= maxAngleDeg;
+        }
+
+        /// <summary>
+        /// Index of the last point the landing trim keeps: trailing points less than <see cref="ThresholdTrimBand"/>
+        /// before the threshold line (or past it) along unit <paramref name="dir"/> are dropped, never the first point.
+        /// -1 for an empty path.
+        /// </summary>
+        private int LastKeptBeforeThreshold(Vector2 touchdownPoint, Vector2 dir)
+        {
+            int i = _points.Count - 1;
+            while (i > 0 && Vector2.Dot(_points[i] - touchdownPoint, dir) > -ThresholdTrimBand) i--;
+            return i;
         }
 
         /// <summary>Total remaining length of the polyline (not including the gap from the aircraft to the first point).</summary>

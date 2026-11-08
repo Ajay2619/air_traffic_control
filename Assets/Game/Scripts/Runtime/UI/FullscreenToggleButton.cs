@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -15,14 +16,32 @@ namespace ClearToLand
         private TextMeshProUGUI _label;
         private bool _lastState;
 
-        /// <summary>True on platforms where an in-game fullscreen toggle makes sense (WebGL, desktop players).</summary>
+        /// <summary>
+        /// True on platforms where an in-game fullscreen toggle makes sense: desktop players and web browsers, except
+        /// iPhone browsers (see <see cref="IsIPhoneBrowser"/>).
+        /// </summary>
         public static bool IsSupported
         {
             get
             {
                 RuntimePlatform p = Application.platform;
-                return p == RuntimePlatform.WebGLPlayer || p == RuntimePlatform.WindowsPlayer
-                       || p == RuntimePlatform.OSXPlayer || p == RuntimePlatform.LinuxPlayer;
+                if (p == RuntimePlatform.WebGLPlayer) return !IsIPhoneBrowser;
+                return p == RuntimePlatform.WindowsPlayer || p == RuntimePlatform.OSXPlayer || p == RuntimePlatform.LinuxPlayer;
+            }
+        }
+
+        /// <summary>
+        /// True on an iPhone / iPod touch browser. Every iPhone browser is WebKit, which has no element Fullscreen API
+        /// (only iPadOS has it), so Screen.fullScreen = true is silently ignored there. Unity's web loader reports these
+        /// devices as "iPhoneOS &lt;version&gt;" (from "iPhone OS" in the user agent); iPads report "iPadOS ..." or a
+        /// Mac user agent ("MacOS ...") and keep the button.
+        /// </summary>
+        private static bool IsIPhoneBrowser
+        {
+            get
+            {
+                string os = SystemInfo.operatingSystem;
+                return !string.IsNullOrEmpty(os) && os.StartsWith("iPhone", StringComparison.OrdinalIgnoreCase);
             }
         }
 

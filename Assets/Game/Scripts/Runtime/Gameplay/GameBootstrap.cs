@@ -22,8 +22,12 @@ namespace ClearToLand
         {
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
             // Mobile players default to 30 fps, which makes path drawing feel laggy. WebGL keeps the browser's
-            // requestAnimationFrame pacing (targetFrameRate -1); desktop keeps vSync.
+            // requestAnimationFrame pacing (targetFrameRate -1).
             Application.targetFrameRate = 60;
+#elif UNITY_STANDALONE && !UNITY_EDITOR
+            // The quality levels ship with vSync off and targetFrameRate is -1, so a desktop player would render as
+            // fast as it can (GPU at 100% for a 2D game). Sync to the display instead; targetFrameRate is then ignored.
+            QualitySettings.vSyncCount = 1;
 #endif
         }
 

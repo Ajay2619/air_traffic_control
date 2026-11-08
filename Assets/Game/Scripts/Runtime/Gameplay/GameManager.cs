@@ -124,6 +124,7 @@ namespace ClearToLand
             Time.timeScale = 1f;
             _initialized = true;
             RefreshViewRect();
+            ApplyScreenSleep();
         }
 
         /// <summary>Adds an aircraft to <see cref="ActiveAircraft"/> (Aircraft.Spawn does this).</summary>
@@ -254,6 +255,7 @@ namespace ClearToLand
                     break;
             }
 
+            ApplyScreenSleep();
             StateChanged?.Invoke(next);
         }
 
@@ -262,6 +264,25 @@ namespace ClearToLand
             if (_scoreSubmitted || Map == null || Score <= 0) return;
             _scoreSubmitted = true;
             HighScores.Submit(Map.id, Score);
+        }
+
+        /// <summary>
+        /// Stores the round's score so far if it beats the saved best (app backgrounded, focus lost, quitting), so a
+        /// live new best survives the process being killed or the tab being closed. Unlike <see cref="SubmitScore"/>
+        /// it does not mark the score as submitted, so a higher final score is still saved later; HighScores.Submit
+        /// only writes when the score is higher. IsNewBest keeps comparing against the best at round start.
+        /// </summary>
+        private void SaveBestSoFar()
+        {
+            if (_initialized && Map != null && Score > 0) HighScores.Submit(Map.id, Score);
+        }
+
+        /// <summary>Keeps the screen awake while a round is live (Playing / CrashSlowMo); otherwise uses the system setting.</summary>
+        private void ApplyScreenSleep()
+        {
+            Screen.sleepTimeout = State == GameState.Playing || State == GameState.CrashSlowMo
+                ? SleepTimeout.NeverSleep
+                : SleepTimeout.SystemSetting;
         }
 
         private static void SetWarningSound(bool on)
@@ -311,21 +332,34 @@ namespace ClearToLand
 
         private void OnApplicationPause(bool pauseStatus)
         {
-            if (_initialized && pauseStatus && State == GameState.Playing) SetPaused(true);
+            if (!pauseStatus) return;
+            SaveBestSoFar(); // the OS may kill a backgrounded app
+            if (_initialized && State == GameState.Playing) SetPaused(true);
         }
 
         private void OnApplicationFocus(bool hasFocus)
         {
+            if (hasFocus) return;
+            SaveBestSoFar(); // e.g. the browser tab is switched away and then closed
 #if !UNITY_EDITOR
-            if (_initialized && !hasFocus && State == GameState.Playing) SetPaused(true);
+            if (_initialized && State == GameState.Playing) SetPaused(true);
 #endif
+        }
+
+        private void OnApplicationQuit()
+        {
+            SaveBestSoFar(); // window closed (X / Alt+F4) mid-round
         }
 
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
             Time.timeScale = 1f;
-            if (_initialized) SetWarningSound(false);
+            if (_initialized)
+            {
+                SetWarningSound(false);
+                Screen.sleepTimeout = SleepTimeout.SystemSetting;
+            }
         }
     }
 }

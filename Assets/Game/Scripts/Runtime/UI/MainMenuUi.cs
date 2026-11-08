@@ -11,6 +11,8 @@ namespace ClearToLand
     /// Main menu canvas built in code: logo + title + subtitle, one card per map (preview, name, tagline, difficulty
     /// stars, best score), and a bottom bar (How to play, sound, fullscreen on WebGL / desktop, quit on desktop).
     /// Cards sit in one row (shrinking to fit) or a 2-row grid on narrow / portrait screens and re-layout on resize.
+    /// A phone held upright gets the <see cref="RotateDeviceOverlay"/> on top. Esc / Android back closes How to play;
+    /// otherwise Android back leaves the app (Unity delivers back as Escape and never quits on its own).
     /// </summary>
     public sealed class MainMenuUi : MonoBehaviour
     {
@@ -25,6 +27,7 @@ namespace ClearToLand
         private const float BarMargin = 28f;
         private const float PreviewInset = 16f;
         private const float PreviewHeight = 207f; // (CardWidth - 2 * inset) * 9 / 16
+        private const string RotateMessage = "Clear to Land plays in landscape. Turn your phone sideways to choose a map.";
 
         private RectTransform _safe;
         private RectTransform _title;
@@ -66,6 +69,7 @@ namespace ClearToLand
                     Vector2.zero);
                 _curtain = UiFactory.CreateCurtain(root, true);
                 _curtain.Hide();
+                RotateDeviceOverlay.Create(root, RotateMessage);
                 return;
             }
 
@@ -93,6 +97,8 @@ namespace ClearToLand
             _curtain = UiFactory.CreateCurtain(root, true);
             _curtain.Duration = 0.3f;
             _curtain.Hide();
+
+            RotateDeviceOverlay.Create(root, RotateMessage); // last: drawn over every other panel
 
             Relayout();
         }
@@ -395,10 +401,17 @@ namespace ClearToLand
             }
 
             Keyboard kb = Keyboard.current;
-            if (kb != null && kb.escapeKey.wasPressedThisFrame && _howTo != null && _howTo.IsVisible)
+            if (kb == null || !kb.escapeKey.wasPressedThisFrame) return;
+
+            if (_howTo != null && _howTo.IsVisible)
             {
                 UiFactory.PlayClick();
                 _howTo.Hide();
+            }
+            else if (!_loading && Application.platform == RuntimePlatform.Android)
+            {
+                // Android back (delivered as Escape) on the menu leaves the app, as Android users expect.
+                Application.Quit();
             }
         }
     }

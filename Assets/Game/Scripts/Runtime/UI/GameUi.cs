@@ -10,7 +10,10 @@ namespace ClearToLand
     /// In-game UI built in code: HUD (score, best, fast-forward, pause), first-play hint, pause overlay and game over
     /// overlay. Subscribes to <see cref="GameManager"/> events and unsubscribes in OnDestroy. All animation runs on
     /// unscaled time (the game sets timeScale 0 when paused / game over).
-    /// Keyboard extras (desktop / WebGL): F = fast-forward, P = pause, Enter / R = retry on the game over screen.
+    /// Keyboard extras (desktop / WebGL): F = fast-forward, P = pause, Enter / R = retry and Esc / Android back = menu on
+    /// the game over screen (once its panel has fully appeared).
+    /// A phone held upright gets the <see cref="RotateDeviceOverlay"/>; the round is paused while it shows and stays
+    /// paused when the device is turned back to landscape, so the player resumes deliberately.
     /// </summary>
     public sealed class GameUi : MonoBehaviour
     {
@@ -20,6 +23,7 @@ namespace ClearToLand
         private const float BadgeY = -392f;            // game over panel: "New best!" badge center
         private const float BestLineY = -398f;         // best line center when there is no badge
         private const float BestLineBelowBadgeY = -458f; // best line center under the badge
+        private const string RotateMessage = "Clear to Land plays in landscape. Turn your phone sideways to keep playing.";
 
         private GameManager _gm;
         private GameConfig _config;
@@ -63,6 +67,7 @@ namespace ClearToLand
         private bool _pendingNewBest;
 
         private UiFader _curtain;
+        private RotateDeviceOverlay _rotate;
 
         /// <summary>
         /// Builds the in-game UI canvas for <paramref name="gm"/> (sorting order 10) and binds it to the game's events.
@@ -107,12 +112,15 @@ namespace ClearToLand
             _curtain.Duration = 0.35f;
             _curtain.Hide();
 
+            _rotate = RotateDeviceOverlay.Create(root, RotateMessage); // last: drawn over every other panel
+
             SetScore(gm.Score, false);
             RefreshFastForward(gm.IsFastForward, true);
             Subscribe();
             ApplyState(gm.State, true);
 
             if (!GameSettings.TutorialSeen && gm.State == GameState.Playing) StartTutorial();
+            if (_rotate.Refresh()) gm.SetPaused(true); // started upright: never run the round behind the prompt
         }
 
         private void BuildScores(RectTransform safe)
@@ -161,6 +169,8 @@ namespace ClearToLand
                 UiTheme.HudButtonColor, UiTheme.TextPrimary, OnFastForwardClicked);
             UiFactory.Place(_ffButton.Rect, Vector2.zero, new Vector2(0.5f, 0.5f),
                 new Vector2(m + size * 0.5f, m + size * 0.5f), new Vector2(size, size));
+            // The buttons cover playable corners: only the disc is a target, and presses on a nearby aircraft go to the world.
+            _ffButton.Rect.gameObject.AddComponent<HudButtonRaycastFilter>().Init(_gm, size);
 
             RectTransform badge = UiFactory.CreateRect("SpeedBadge", group);
             UiFactory.Place(badge, Vector2.zero, new Vector2(0f, 0.5f), new Vector2(m + size + 14f, m + size * 0.5f),
@@ -180,6 +190,7 @@ namespace ClearToLand
                 UiTheme.HudButtonColor, UiTheme.TextPrimary, OnPauseClicked);
             UiFactory.Place(pause.Rect, new Vector2(1f, 0f), new Vector2(0.5f, 0.5f),
                 new Vector2(-m - size * 0.5f, m + size * 0.5f), new Vector2(size, size));
+            pause.Rect.gameObject.AddComponent<HudButtonRaycastFilter>().Init(_gm, size);
         }
 
         private void BuildTutorial(RectTransform safe)
@@ -326,14 +337,15 @@ namespace ClearToLand
             _goBadgePunch.Amount = 0.35f;
             _goBadgePunch.Duration = 0.45f;
 
+            // No built-in click sound: the handlers ignore taps until the panel has fully appeared and click only when acting.
             Vector2 size = new Vector2(320f, UiTheme.ButtonHeight);
             UiButtonParts retry = UiFactory.CreateButton(panel, "Retry", "Retry", UiTheme.IconRestart, UiTheme.AccentColor,
-                UiTheme.Ink, size, OnRestartClicked);
+                UiTheme.Ink, size, OnGameOverRetryClicked, false);
             UiFactory.Place(retry.Rect, new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f),
                 new Vector2(-size.x * 0.5f - 12f, 44f + size.y * 0.5f), size);
 
             UiButtonParts menu = UiFactory.CreateButton(panel, "Menu", "Menu", UiTheme.IconHome, UiTheme.ButtonColor,
-                UiTheme.TextPrimary, size, OnMenuClicked);
+                UiTheme.TextPrimary, size, OnGameOverMenuClicked, false);
             UiFactory.Place(menu.Rect, new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f),
                 new Vector2(size.x * 0.5f + 12f, 44f + size.y * 0.5f), size);
 
@@ -405,6 +417,26 @@ namespace ClearToLand
         private void OnMenuClicked()
         {
             if (_gm != null) _gm.QuitToMenu();
+        }
+
+        /// <summary>
+        /// True once the game over panel has fully faded in. Taps (and keys) before that are ignored, so a tap that was
+        /// meant for the game during the crash slow motion cannot skip the score and "New best!" reveal.
+        /// </summary>
+        private bool GameOverReady => _gameOverOverlay != null && _gameOverOverlay.IsVisible && _gameOverOverlay.Progress >= 1f;
+
+        private void OnGameOverRetryClicked()
+        {
+            if (_gm == null || !GameOverReady) return;
+            UiFactory.PlayClick();
+            _gm.Restart();
+        }
+
+        private void OnGameOverMenuClicked()
+        {
+            if (_gm == null || !GameOverReady) return;
+            UiFactory.PlayClick();
+            _gm.QuitToMenu();
         }
 
         // ================================================================== state
@@ -560,6 +592,11 @@ namespace ClearToLand
         {
             if (_gm == null) return;
 
+            // Phone held upright: keep the round paused under the prompt. Re-applied every frame (SetPaused only acts
+            // from Playing), so an Esc / Android back toggle by GameManager earlier this frame is undone at once.
+            bool upright = _rotate != null && _rotate.Refresh();
+            if (upright) _gm.SetPaused(true);
+
             if (_tutorialActive && _gm.State == GameState.Playing)
             {
                 _tutorialTime += Time.unscaledDeltaTime;
@@ -568,7 +605,7 @@ namespace ClearToLand
 
             if (_countingUp) UpdateCountUp();
 
-            HandleKeyboard();
+            if (!upright) HandleKeyboard();
         }
 
         private void HandleKeyboard()
@@ -587,11 +624,18 @@ namespace ClearToLand
                 UiFactory.PlayClick();
                 _gm.TogglePause();
             }
-            else if (state == GameState.GameOver && _gameOverOverlay.Progress >= 1f
-                     && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.rKey.wasPressedThisFrame))
+            else if (state == GameState.GameOver && GameOverReady)
             {
-                UiFactory.PlayClick();
-                _gm.Restart();
+                if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.rKey.wasPressedThisFrame)
+                {
+                    UiFactory.PlayClick();
+                    _gm.Restart();
+                }
+                else if (kb.escapeKey.wasPressedThisFrame) // Esc / Android back (GameManager only uses Esc for pause)
+                {
+                    UiFactory.PlayClick();
+                    _gm.QuitToMenu();
+                }
             }
         }
     }

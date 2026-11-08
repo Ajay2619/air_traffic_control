@@ -23,6 +23,8 @@ namespace ClearToLand
         private const float DefaultPointSpacing = 0.12f;
         private const float CaptureStepLength = 0.25f;
         private const int MaxCaptureSteps = 64;
+        /// <summary>Extra degrees allowed for the final leg LockForLanding builds, so slightly offset parallel approaches still lock.</summary>
+        private const float FinalLegAngleTolerance = 15f;
 
         private sealed class Drag
         {
@@ -30,6 +32,8 @@ namespace ClearToLand
             public Aircraft Aircraft;
             public bool Active;
             public bool Seen;
+            /// <summary>Last world point (clamped like drawn points) that was fed into the path, or the press point.</summary>
+            public Vector2 LastWorld;
         }
 
         private readonly List<Drag> _drags = new List<Drag>(12);
@@ -37,9 +41,26 @@ namespace ClearToLand
         private GameManager _gm;
         private float _lastTouchTime = -100f;
         private bool _enhancedTouchEnabled;
+        private bool _pollDevices = true;
 
         /// <summary>When false, all drags end and no input is processed. Default true.</summary>
         public bool InputEnabled { get; set; } = true;
+
+        /// <summary>
+        /// When true (default) the touchscreen and mouse are polled every frame. When false they are ignored and
+        /// pointers are fed only through <see cref="PointerDown"/> / <see cref="PointerMove"/> / <see cref="PointerUp"/>
+        /// (tests, automation). Changing it ends all drags.
+        /// </summary>
+        public bool PollDevices
+        {
+            get => _pollDevices;
+            set
+            {
+                if (_pollDevices == value) return;
+                _pollDevices = value;
+                EndAllDrags();
+            }
+        }
 
         /// <summary>Number of pointers currently drawing a path.</summary>
         public int ActiveDragCount => _drags.Count;
@@ -71,14 +92,48 @@ namespace ClearToLand
 
         private void Update()
         {
-            if (_gm == null || !InputEnabled || _gm.State != GameState.Playing)
+            if (!CanProcessInput())
             {
                 if (_drags.Count > 0) EndAllDrags();
                 return;
             }
+            if (!_pollDevices) return;
 
             int touchCount = ProcessTouches();
             ProcessMouse(touchCount);
+        }
+
+        private bool CanProcessInput() => _gm != null && InputEnabled && _gm.State == GameState.Playing;
+
+        // ------------------------------------------------------------------ fed pointers (PollDevices == false)
+
+        /// <summary>
+        /// Presses pointer <paramref name="pointerId"/> at <paramref name="screenPosition"/>, like a touch beginning
+        /// (meant for use with <see cref="PollDevices"/> false). Returns true when it picked an aircraft to draw for.
+        /// </summary>
+        public bool PointerDown(int pointerId, Vector2 screenPosition)
+        {
+            if (!CanProcessInput()) return false;
+            Drag drag = FindDrag(pointerId);
+            if (drag != null) EndDrag(drag);
+            return TryBeginDrag(pointerId, screenPosition) != null;
+        }
+
+        /// <summary>Moves (or holds) a pressed pointer, like a touch in the Moved / Stationary phase.</summary>
+        public void PointerMove(int pointerId, Vector2 screenPosition)
+        {
+            if (!CanProcessInput()) return;
+            Drag drag = FindDrag(pointerId);
+            if (drag != null) UpdateDrag(drag, screenPosition);
+        }
+
+        /// <summary>Releases a pointer at <paramref name="screenPosition"/>, like a touch ending (last move, then end of drag).</summary>
+        public void PointerUp(int pointerId, Vector2 screenPosition)
+        {
+            Drag drag = FindDrag(pointerId);
+            if (drag == null) return;
+            if (CanProcessInput()) UpdateDrag(drag, screenPosition);
+            if (drag.Active) EndDrag(drag);
         }
 
         // ------------------------------------------------------------------ touches
@@ -221,6 +276,8 @@ namespace ClearToLand
             drag.Aircraft = best;
             drag.Active = true;
             drag.Seen = true;
+            // Clamped like UpdateDrag's target, so a press near the view edge does not count as movement.
+            drag.LastWorld = PlayBounds.ClampInside(_gm.ViewRect, world, DrawClampInset);
             _drags.Add(drag);
 
             best.BeginPath();
@@ -250,6 +307,13 @@ namespace ClearToLand
             FlightPath path = a.Path;
             MapRuntime map = _gm.MapRuntime;
 
+            // The path starts as just the aircraft's position, which it consumes at once, and the aircraft also empties
+            // the path when it catches up with a still pointer. Re-seed an empty path only once the pointer has really
+            // moved since it last fed a point (or pressed): otherwise a tap or a held pointer would drop a waypoint
+            // behind the aircraft, turning it around or parking it at the pointer. (A non-empty path is covered by
+            // AddPoint's own spacing check against its last point.)
+            if (path.IsEmpty && (target - drag.LastWorld).sqrMagnitude < spacing * spacing) return;
+
             // Long pointer jumps (fast flicks, low WebGL/mobile frame rates) are walked in short steps so a path that
             // passes through a capture zone within one frame still locks there instead of overshooting it.
             Vector2 from = path.IsEmpty ? target : path.LastPoint;
@@ -258,7 +322,9 @@ namespace ClearToLand
             for (int s = 1; s <= steps; s++)
             {
                 Vector2 world = s == steps ? target : Vector2.Lerp(from, target, (float)s / steps);
-                if (path.AddPoint(world, spacing) <= 0 || map == null) continue;
+                if (path.AddPoint(world, spacing) <= 0) continue;
+                drag.LastWorld = world;
+                if (map == null) continue;
 
                 Vector2 heading = path.EndDirection(EndDirectionLookback);
                 if (heading.sqrMagnitude < 1e-8f)
@@ -270,6 +336,19 @@ namespace ClearToLand
 
                 LandingSpot spot = map.FindCapture(a.Type, world, heading, maxAngle);
                 if (spot == null) continue;
+
+                // Locking trims the points past the threshold line and joins the rest to the touchdown point with a
+                // straight leg. A path cut onto the runway from the side would get a leg that is near perpendicular
+                // or points backwards: don't lock it, let the player keep drawing round to the approach end.
+                // Exception: every drawn point is already past the line while the aircraft itself is still short of
+                // it and lined up (a quick drag from an aircraft just before the runway re-seeds the consumed path on
+                // the runway). The route really starts at the aircraft, so drop the points and fly it straight in.
+                float maxLegAngle = maxAngle + FinalLegAngleTolerance;
+                if (spot.IsDirectional && !path.FinalLegWithin(spot.Touchdown, spot.Direction, maxLegAngle))
+                {
+                    if (!path.CanFlyStraightIn(a.Position, spot.Touchdown, spot.Direction, maxLegAngle)) continue;
+                    path.Clear();
+                }
 
                 path.LockForLanding(spot.Index, spot.Touchdown, spot.Direction, spacing);
                 spot.Flash();
