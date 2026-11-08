@@ -536,6 +536,12 @@ namespace ClearToLand.EditorTools
 
         private static void AssignConfig(MonoBehaviour behaviour, GameConfig config, Action fallbackSetter)
         {
+            // EditorSceneManager.NewScene unloads assets that are only referenced from C#, so a GameConfig captured
+            // before the scene was created can be dead here (it would serialize as an empty reference). Reload it.
+            GameConfig onDisk = AssetDatabase.LoadAssetAtPath<GameConfig>(ConfigPath);
+            if (onDisk != null) config = onDisk;
+            if (config == null) Warn($"{behaviour.GetType().Name}: GameConfig not found at {ConfigPath}; 'config' stays empty.");
+
             SerializedObject so = new SerializedObject(behaviour);
             SerializedProperty prop = so.FindProperty("config");
             if (prop != null && prop.propertyType == SerializedPropertyType.ObjectReference)

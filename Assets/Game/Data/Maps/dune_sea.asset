@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24a0a3617d96e464cad05b63d0adbc53, type: 3}
+  m_Name: dune_sea
+  m_EditorClassIdentifier: ClearToLand.Runtime::ClearToLand.MapDefinition
+  id: dune_sea
+  displayName: Dune Sea
+  tagline: Sun-baked strips and an oasis helipad
+  difficulty: 2
+  background: {fileID: 21300000, guid: 7c0244580a4d774478486f63b10d2378, type: 3}
+  cameraColor: {r: 0.76, g: 0.6, b: 0.41, a: 1}
+  landingSpots:
+  - name: Desert main runway
+    kind: 1
+    position: {x: 5.6, y: -2.2}
+    angleDeg: 172
+    length: 5.8
+    width: 0.75
+  - name: Mesa strip
+    kind: 0
+    position: {x: -6.5, y: 2.3}
+    angleDeg: 320
+    length: 3.6
+    width: 0.6
+  - name: Oasis helipad
+    kind: 2
+    position: {x: 4.4, y: 2.6}
+    angleDeg: 0
+    length: 0
+    width: 1
+  spawnTable:
+  - type: {fileID: 11400000, guid: eaec5d4f35ed814429419d982c25e9d0, type: 2}
+    weight: 3
+    unlockTime: 0
+  - type: {fileID: 11400000, guid: 67203104be2a29b46955848840e7c819, type: 2}
+    weight: 3
+    unlockTime: 10
+  - type: {fileID: 11400000, guid: 82a2006953e18974193349f96f1b2040, type: 2}
+    weight: 2
+    unlockTime: 25
+  - type: {fileID: 11400000, guid: 37e985ed82e9e6f4d8bf4a2778454882, type: 2}
+    weight: 1.5
+    unlockTime: 90
+  initialSpawnInterval: 7
+  minSpawnInterval: 2.7
+  rampDuration: 380
+  initialMaxAircraft: 3
+  maxAircraftCap: 11
+  maxAircraftStepSeconds: 36
+  speedMultiplier: 1.05

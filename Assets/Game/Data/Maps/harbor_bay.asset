@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24a0a3617d96e464cad05b63d0adbc53, type: 3}
+  m_Name: harbor_bay
+  m_EditorClassIdentifier: ClearToLand.Runtime::ClearToLand.MapDefinition
+  id: harbor_bay
+  displayName: Harbor Bay
+  tagline: 'Busy coast: seaplanes join the traffic'
+  difficulty: 3
+  background: {fileID: 21300000, guid: 6c9afae8944156041af3470387be99a9, type: 3}
+  cameraColor: {r: 0.15, g: 0.39, b: 0.56, a: 1}
+  landingSpots:
+  - name: Shore runway
+    kind: 1
+    position: {x: -6.2, y: 0}
+    angleDeg: 6
+    length: 5.6
+    width: 0.75
+  - name: Hilltop strip
+    kind: 0
+    position: {x: 6.8, y: 3.2}
+    angleDeg: 195
+    length: 3.4
+    width: 0.6
+  - name: Bay water lane
+    kind: 3
+    position: {x: 1.8, y: -3.4}
+    angleDeg: 20
+    length: 4.4
+    width: 0.8
+  - name: Pier helipad
+    kind: 2
+    position: {x: 7.4, y: -0.5}
+    angleDeg: 0
+    length: 0
+    width: 1
+  spawnTable:
+  - type: {fileID: 11400000, guid: eaec5d4f35ed814429419d982c25e9d0, type: 2}
+    weight: 3
+    unlockTime: 0
+  - type: {fileID: 11400000, guid: 67203104be2a29b46955848840e7c819, type: 2}
+    weight: 2.5
+    unlockTime: 0
+  - type: {fileID: 11400000, guid: 82a2006953e18974193349f96f1b2040, type: 2}
+    weight: 2
+    unlockTime: 15
+  - type: {fileID: 11400000, guid: 9673d5974524511429e8537cab4a96be, type: 2}
+    weight: 2.5
+    unlockTime: 5
+  initialSpawnInterval: 6.8
+  minSpawnInterval: 2.5
+  rampDuration: 360
+  initialMaxAircraft: 3
+  maxAircraftCap: 12
+  maxAircraftStepSeconds: 33
+  speedMultiplier: 1.08

@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 103c6595b6a860c4eaa5fbc7558c3f26, type: 3}
+  m_Name: GameConfig
+  m_EditorClassIdentifier: ClearToLand.Runtime::ClearToLand.GameConfig
+  maps:
+  - {fileID: 11400000, guid: 1f11c3bd2c0e401448c8d3747163eb4e, type: 2}
+  - {fileID: 11400000, guid: c661e0baba206604792639bc46cb05d2, type: 2}
+  - {fileID: 11400000, guid: dd9c9ad88eaff5d40953e8299c6b75c5, type: 2}
+  - {fileID: 11400000, guid: 2581924ab19dfb44789d046d699318ca, type: 2}
+  aircraftTypes:
+  - {fileID: 11400000, guid: eaec5d4f35ed814429419d982c25e9d0, type: 2}
+  - {fileID: 11400000, guid: 67203104be2a29b46955848840e7c819, type: 2}
+  - {fileID: 11400000, guid: 37e985ed82e9e6f4d8bf4a2778454882, type: 2}
+  - {fileID: 11400000, guid: 82a2006953e18974193349f96f1b2040, type: 2}
+  - {fileID: 11400000, guid: 9673d5974524511429e8537cab4a96be, type: 2}
+  pathLineMaterial: {fileID: 2100000, guid: 2b5f523d02ba7c640adb0836b9a7945e, type: 2}
+  edgeWarningSprite: {fileID: 21300000, guid: fe17c0e486a3ef547b0dc1fb69d43a3a, type: 3}
+  ringSprite: {fileID: 21300000, guid: 7fcf4b85dd5df25459d4783589add8e5, type: 3}
+  softCircleSprite: {fileID: 21300000, guid: 5763c05418e585948be11f1cb45dd4aa, type: 3}
+  debrisSprite: {fileID: 21300000, guid: d3fc79b1804505042a7c492ee0dfc3fc, type: 3}
+  spotGlowRunwaySprite: {fileID: 21300000, guid: 236577658f06b9445adaca34785ef994, type: 3}
+  spotGlowPadSprite: {fileID: 21300000, guid: 7795e35938f3b2045b16e76d44caad0e, type: 3}
+  chevronSprite: {fileID: 21300000, guid: fe9d08f6bce3b89428e6e0b1674000df, type: 3}
+  panelSprite: {fileID: 21300000, guid: 3f3eb26b147a8ef4cab2d25d091d9097, type: 3}
+  buttonSprite: {fileID: 21300000, guid: 66f36555ebc8c4a4b9898da290e187ae, type: 3}
+  cardSprite: {fileID: 21300000, guid: 614baa511dc7a0a4ea7f1a29deb0b802, type: 3}
+  circleSprite: {fileID: 21300000, guid: a4d57cde1ba8c334c81a3e40be878725, type: 3}
+  logoSprite: {fileID: 21300000, guid: 198d59d895f6bb743a084a2ef6e12275, type: 3}
+  iconPause: {fileID: 21300000, guid: 6836960fd0677bc4bb9f7f92d32c6d7f, type: 3}
+  iconPlay: {fileID: 21300000, guid: e59c64241e7f3aa4280078752174ddf9, type: 3}
+  iconFastForward: {fileID: 21300000, guid: 4a9c4d2c109791c47bc3123b0540f1f4, type: 3}
+  iconSoundOn: {fileID: 21300000, guid: 30e3f0ecd3b5cd742b2472fe509fc37c, type: 3}
+  iconSoundOff: {fileID: 21300000, guid: 1c5720bdd2abd494aaf700704b3c0311, type: 3}
+  iconHome: {fileID: 21300000, guid: 6930b0224ab801a48ad14597d37615a2, type: 3}
+  iconRestart: {fileID: 21300000, guid: bec46174e1cb07b45a1bd25d0a330255, type: 3}
+  iconHelp: {fileID: 21300000, guid: 511091898358b594c92de4dd65523ca5, type: 3}
+  iconClose: {fileID: 21300000, guid: 60b4059413e4a5040b8287957e4327e3, type: 3}
+  iconStar: {fileID: 21300000, guid: 37578f9ab38c81548b5fc47f8cb0e123, type: 3}
+  fastForwardScale: 2
+  pathPointSpacing: 0.12
+  pickPadding: 0.45
+  proximityWarnMargin: 0.9
+  spawnWarningLeadTime: 2.2
+  landingMaxAngleDeg: 60
+  crashSlowMotionScale: 0.25
+  crashSlowMotionDuration: 1.3
+  edgeTurnRateDeg: 140
+  shadowOffset: {x: 0.1, y: -0.16}

@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24a0a3617d96e464cad05b63d0adbc53, type: 3}
+  m_Name: green_valley
+  m_EditorClassIdentifier: ClearToLand.Runtime::ClearToLand.MapDefinition
+  id: green_valley
+  displayName: Green Valley
+  tagline: "Quiet farmland strip \u2014 learn the ropes"
+  difficulty: 1
+  background: {fileID: 21300000, guid: da5106b8944cc3641b981967ac87f415, type: 3}
+  cameraColor: {r: 0.32, g: 0.45, b: 0.23, a: 1}
+  landingSpots:
+  - name: Valley main runway
+    kind: 1
+    position: {x: -5.2, y: -1.9}
+    angleDeg: 8
+    length: 5.6
+    width: 0.75
+  - name: Farm strip
+    kind: 0
+    position: {x: 6.4, y: 1.6}
+    angleDeg: 165
+    length: 3.4
+    width: 0.6
+  - name: Hangar helipad
+    kind: 2
+    position: {x: -3.4, y: 2.5}
+    angleDeg: 0
+    length: 0
+    width: 1
+  spawnTable:
+  - type: {fileID: 11400000, guid: eaec5d4f35ed814429419d982c25e9d0, type: 2}
+    weight: 3
+    unlockTime: 0
+  - type: {fileID: 11400000, guid: 67203104be2a29b46955848840e7c819, type: 2}
+    weight: 2
+    unlockTime: 20
+  - type: {fileID: 11400000, guid: 82a2006953e18974193349f96f1b2040, type: 2}
+    weight: 2
+    unlockTime: 40
+  initialSpawnInterval: 8
+  minSpawnInterval: 3
+  rampDuration: 420
+  initialMaxAircraft: 3
+  maxAircraftCap: 10
+  maxAircraftStepSeconds: 40
+  speedMultiplier: 1
